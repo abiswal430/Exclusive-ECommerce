@@ -12,6 +12,7 @@ app.use(cors({
   origin: "http://localhost:5173",
   credentials: true
 }));
+
 app.use(express.json());
 
 // ✅ SERVE IMAGES
@@ -25,8 +26,9 @@ mongoose.connect(process.env.MONGO_URI || "mongodb://127.0.0.1:27017/exclusive")
 // ================= MODELS =================
 const User = require("./models/User");
 const Order = require("./models/Order");
+const Product = require("./models/Product");
 
-// ================= ROUTES =================
+// ================= PRODUCT ROUTES =================
 const productRoutes = require("./routes/productRoutes");
 app.use("/api/products", productRoutes);
 
@@ -38,27 +40,26 @@ app.post("/api/signup", async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({ message: "All fields are required" });
+      return res.status(400).json({ message: "All fields are required ❌" });
     }
 
     const existing = await User.findOne({ username });
     if (existing) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({ message: "User already exists ❌" });
     }
 
     const hashed = await bcrypt.hash(password, 10);
 
-    const user = new User({
-      username,
-      password: hashed
-    });
-
+    const user = new User({ username, password: hashed });
     await user.save();
 
-    res.json({ message: "Registered Successfully ✅" });
+    res.json({
+      success: true,
+      message: "Registration successful ✅"
+    });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
@@ -67,18 +68,14 @@ app.post("/api/login", async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
     const user = await User.findOne({ username });
     if (!user) {
-      return res.status(400).json({ message: "User not found" });
+      return res.status(400).json({ message: "User not found ❌" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid Credentials" });
+      return res.status(400).json({ message: "Invalid credentials ❌" });
     }
 
     const token = jwt.sign(
@@ -88,7 +85,7 @@ app.post("/api/login", async (req, res) => {
     );
 
     res.json({
-      message: "Login Successful ✅",
+      success: true,
       token,
       user: {
         _id: user._id,
@@ -103,41 +100,48 @@ app.post("/api/login", async (req, res) => {
 
 // ================= ORDERS =================
 
-// ✅ CREATE ORDER (FULL FIX)
+// ✅ CREATE ORDER (🔥 FIXED)
 app.post("/api/orders", async (req, res) => {
   try {
-    const { items, total, paymentMethod, upi, bank, userId } = req.body;
+    console.log("Incoming Order Data:", req.body);
 
-    if (!items || items.length === 0) {
-      return res.status(400).json({ message: "No items in order ❌" });
+    const { products, total, paymentMethod, userId } = req.body;
+
+    if (!products || !Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ message: "Cart is empty ❌" });
     }
+
+    // ✅ CONVERT products → items (VERY IMPORTANT FIX)
+    const items = products.map(p => ({
+      name: p.name,
+      price: p.price,
+      qty: p.qty || 1,
+      image: p.image
+    }));
 
     const order = new Order({
       userId,
-      items: items.map(item => ({
-        name: item.name,
-        price: item.price,
-        qty: item.qty || 1,
-        image: item.image
-      })),
+      items, // ✅ CORRECT FIELD
       total,
       paymentMethod,
-      upi,
-      bank,
       status: "Placed",
       date: new Date()
     });
 
     await order.save();
 
-    res.json(order);
+    res.json({
+      success: true,
+      message: "Order placed successfully ✅",
+      order
+    });
 
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// ✅ GET ALL ORDERS (ADMIN)
+// ✅ GET ALL ORDERS
 app.get("/api/orders", async (req, res) => {
   try {
     const orders = await Order.find().sort({ date: -1 });
@@ -147,7 +151,7 @@ app.get("/api/orders", async (req, res) => {
   }
 });
 
-// ✅ GET USER ORDERS (🔥 IMPORTANT FIX)
+// ✅ GET USER ORDERS
 app.get("/api/orders/:userId", async (req, res) => {
   try {
     const orders = await Order.find({
@@ -161,7 +165,7 @@ app.get("/api/orders/:userId", async (req, res) => {
   }
 });
 
-// ✅ UPDATE ORDER STATUS
+// ✅ UPDATE STATUS
 app.put("/api/orders/:id", async (req, res) => {
   try {
     const updated = await Order.findByIdAndUpdate(
@@ -169,6 +173,10 @@ app.put("/api/orders/:id", async (req, res) => {
       { status: req.body.status },
       { new: true }
     );
+
+    if (!updated) {
+      return res.status(404).json({ message: "Order not found ❌" });
+    }
 
     res.json(updated);
 
@@ -183,37 +191,16 @@ app.delete("/api/orders/:id", async (req, res) => {
     const deleted = await Order.findByIdAndDelete(req.params.id);
 
     if (!deleted) {
-      return res.status(404).json({ message: "Order not found" });
+      return res.status(404).json({ message: "Order not found ❌" });
     }
 
-    res.json({ message: "Order deleted ✅" });
+    res.json({
+      success: true,
+      message: "Order deleted ✅"
+    });
 
   } catch (err) {
     res.status(500).json({ message: err.message });
-  }
-});
-
-// ================= TEST DATA =================
-app.get("/add-test", async (req, res) => {
-  try {
-    const Product = require("./models/Product");
-
-    await Product.deleteMany();
-
-    await Product.insertMany([
-      { name: "Gamepad", price: 1200, image: "/images/gamepad.png" },
-      { name: "Keyboard", price: 1800, image: "/images/keyboard.png" },
-      { name: "Monitor", price: 15000, image: "/images/monitor.png" },
-      { name: "Laptop", price: 80000, image: "/images/laptop.png" },
-      { name: "Headphones", price: 2000, image: "/images/headphone.png" },
-      { name: "CPU Cooler", price: 2500, image: "/images/cooler.png" },
-      { name: "iPhone 14", price: 70000, image: "/images/iphone14.png" }
-    ]);
-
-    res.send("✅ Products Added Successfully");
-
-  } catch (err) {
-    res.status(500).send(err.message);
   }
 });
 

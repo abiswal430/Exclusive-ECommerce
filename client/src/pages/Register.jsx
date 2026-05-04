@@ -10,6 +10,8 @@ export default function Register() {
     password: ""
   });
 
+  const [loading, setLoading] = useState(false);
+
   const handleChange = (e) => {
     setData({ ...data, [e.target.name]: e.target.value });
   };
@@ -23,28 +25,37 @@ export default function Register() {
     }
 
     try {
+      setLoading(true);
+
       const res = await axios.post(
         "http://localhost:5000/api/signup",
         data
       );
 
-      // ✅ SUCCESS
-      alert("Registration Successful ✅");
+      // ✅ FIX: Show backend message properly
+      alert(res.data.message || "Registration Successful ✅");
+
       navigate("/login");
 
     } catch (err) {
-      const message = err.response?.data;
+      // ✅ FIX: Proper error extraction
+      const message =
+        err.response?.data?.message || // if backend sends object
+        err.response?.data ||          // if backend sends string
+        "Error creating account ❌";
 
-      // ✅ HANDLE USER ALREADY EXISTS
       if (message === "User already exists") {
         alert("User already exists! Redirecting to Login 🔁");
 
         setTimeout(() => {
           navigate("/login");
-        }, 1000); // smooth redirect
+        }, 1000);
       } else {
-        alert(message || "Error creating account ❌");
+        alert(message);
       }
+
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -85,9 +96,10 @@ export default function Register() {
         {/* BUTTON */}
         <button
           type="submit"
+          disabled={loading}
           className="w-full bg-black text-white py-2 rounded hover:bg-gray-800"
         >
-          Register
+          {loading ? "Registering..." : "Register"}
         </button>
 
         {/* LOGIN LINK */}

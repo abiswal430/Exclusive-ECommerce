@@ -8,87 +8,99 @@ export default function Checkout() {
   const navigate = useNavigate();
 
   const [method, setMethod] = useState("card");
+  const [loading, setLoading] = useState(false);
 
-  // 💳 Card
   const [card, setCard] = useState({
     number: "",
     expiry: "",
     cvv: ""
   });
 
-  // 📱 UPI
   const [upi, setUpi] = useState("");
-
-  // 🏦 Netbanking
   const [bank, setBank] = useState("");
 
-  // 💰 Total
+  const BASE_URL = "http://localhost:5000";
+
   const total = cart.reduce(
     (sum, item) => sum + item.price * (item.qty || 1),
     0
   );
 
-  // ✅ Place Order
-const placeOrder = async () => {
-
-  if (!cart || cart.length === 0) {
-    return alert("Cart is empty ❌");
-  }
-
-  // 🔥 VALIDATIONS
-  if (method === "card") {
-    if (!card.number || !card.expiry || !card.cvv) {
-      return alert("Enter full card details ❗");
+  // 🚀 PLACE ORDER
+  const placeOrder = async () => {
+    if (!cart || cart.length === 0) {
+      return alert("Cart is empty ❌");
     }
-  }
 
-  if (method === "upi") {
-    if (!upi.includes("@")) {
-      return alert("Enter valid UPI ID ❗");
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user?._id) {
+      alert("Please login first 🔐");
+      navigate("/login");
+      return;
     }
-  }
 
-  if (method === "netbanking") {
-    if (!bank) {
-      return alert("Select a bank ❗");
+    // ✅ VALIDATIONS
+    if (method === "card") {
+      if (!card.number || !card.expiry || !card.cvv) {
+        return alert("Enter full card details ❗");
+      }
     }
-  }
 
-  try {
+    if (method === "upi") {
+      if (!upi.includes("@")) {
+        return alert("Enter valid UPI ID ❗");
+      }
+    }
 
-    // ✅ FIX: CLEAN PRODUCT DATA
-    const formattedProducts = cart.map(item => ({
-      productId: item._id,
-      name: item.name,
-      price: item.price,
-      qty: item.qty || 1,
-      image: item.image
-    }));
+    if (method === "netbanking") {
+      if (!bank) {
+        return alert("Select a bank ❗");
+      }
+    }
 
-    console.log("🛒 Sending:", formattedProducts);
+    try {
+      setLoading(true);
 
-    await axios.post("http://localhost:5000/api/orders", {
-      products: formattedProducts,
-      total,
-      paymentMethod: method,
-      paymentDetails:
-        method === "card"
-          ? card
-          : method === "upi"
-          ? { upi }
-          : method === "netbanking"
-          ? { bank }
-          : {}
-    });
+      // 🔥 IMPORTANT FIX (CORE ISSUE SOLVED)
+      const products = cart.map(item => ({
+        name: item.name,
+        price: Number(item.price),
+        qty: Number(item.qty || 1),
+        image: item.image || "/images/default.png"
+      }));
 
-    clearCart();
-    navigate("/order/success");
+      console.log("🛒 Sending products:", products);
 
-  } catch (err) {
-    console.error("❌ ERROR:", err.response?.data || err.message);
-    alert("Payment Failed ❌");
-  }
-};
+      const orderData = {
+        userId: user._id,
+        products,   // ✅ MUST be products
+        total,
+        paymentMethod: method,
+        upi: method === "upi" ? upi : "",
+        bank: method === "netbanking" ? bank : "",
+        status: "Placed"
+      };
+
+      console.log("📦 Final Order:", orderData);
+
+      const res = await axios.post(`${BASE_URL}/api/orders`, orderData);
+
+      console.log("✅ ORDER SUCCESS:", res.data);
+
+      alert("Payment Successful ✅");
+
+      clearCart();
+      navigate("/orders");
+      navigate("/invoice", { state: { order: res.data.order } });
+
+    } catch (err) {
+      console.error("❌ ERROR:", err.response?.data || err.message);
+
+      alert(err.response?.data?.message || "Payment Failed ❌");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex gap-6 p-6 bg-gray-100 min-h-screen">
@@ -96,59 +108,27 @@ const placeOrder = async () => {
       {/* LEFT SIDE */}
       <div className="w-2/3 bg-white p-6 rounded shadow">
 
-        <h2 className="text-xl font-bold mb-4">
-          Complete Payment
-        </h2>
+        <h2 className="text-xl font-bold mb-4">Complete Payment</h2>
 
         {/* PAYMENT OPTIONS */}
         <div className="space-y-3">
-
-          {/* CARD */}
-          <label className="block border p-3 rounded cursor-pointer">
-            <input
-              type="radio"
-              checked={method === "card"}
-              onChange={() => setMethod("card")}
-            />
-            <span className="ml-2">Credit / Debit Card</span>
-          </label>
-
-          {/* UPI */}
-          <label className="block border p-3 rounded cursor-pointer">
-            <input
-              type="radio"
-              checked={method === "upi"}
-              onChange={() => setMethod("upi")}
-            />
-            <span className="ml-2">UPI</span>
-          </label>
-
-          {/* NETBANKING */}
-          <label className="block border p-3 rounded cursor-pointer">
-            <input
-              type="radio"
-              checked={method === "netbanking"}
-              onChange={() => setMethod("netbanking")}
-            />
-            <span className="ml-2">Net Banking</span>
-          </label>
-
-          {/* COD */}
-          <label className="block border p-3 rounded cursor-pointer">
-            <input
-              type="radio"
-              checked={method === "cod"}
-              onChange={() => setMethod("cod")}
-            />
-            <span className="ml-2">Cash on Delivery</span>
-          </label>
-
+          {["card", "upi", "netbanking", "cod"].map(type => (
+            <label key={type} className="block border p-3 rounded cursor-pointer">
+              <input
+                type="radio"
+                checked={method === type}
+                onChange={() => setMethod(type)}
+              />
+              <span className="ml-2 capitalize">
+                {type === "cod" ? "Cash on Delivery" : type}
+              </span>
+            </label>
+          ))}
         </div>
 
-        {/* ================= CARD FORM ================= */}
+        {/* CARD */}
         {method === "card" && (
           <div className="mt-6 space-y-3">
-
             <input
               placeholder="Card Number"
               className="border p-2 w-full"
@@ -157,7 +137,6 @@ const placeOrder = async () => {
                 setCard({ ...card, number: e.target.value })
               }
             />
-
             <input
               placeholder="MM/YY"
               className="border p-2 w-full"
@@ -166,7 +145,6 @@ const placeOrder = async () => {
                 setCard({ ...card, expiry: e.target.value })
               }
             />
-
             <input
               placeholder="CVV"
               className="border p-2 w-full"
@@ -175,11 +153,10 @@ const placeOrder = async () => {
                 setCard({ ...card, cvv: e.target.value })
               }
             />
-
           </div>
         )}
 
-        {/* ================= UPI ================= */}
+        {/* UPI */}
         {method === "upi" && (
           <div className="mt-6">
             <input
@@ -191,7 +168,7 @@ const placeOrder = async () => {
           </div>
         )}
 
-        {/* ================= NETBANKING ================= */}
+        {/* NETBANKING */}
         {method === "netbanking" && (
           <div className="mt-6">
             <select
@@ -209,12 +186,13 @@ const placeOrder = async () => {
           </div>
         )}
 
-        {/* PAY BUTTON */}
+        {/* BUTTON */}
         <button
           onClick={placeOrder}
-          className="bg-yellow-500 text-white px-6 py-2 mt-6 rounded w-full"
+          disabled={loading}
+          className="bg-yellow-500 text-white px-6 py-2 mt-6 rounded w-full hover:bg-yellow-600 disabled:opacity-50"
         >
-          Pay ₹ {total}
+          {loading ? "Processing..." : `Pay ₹ ${total}`}
         </button>
 
       </div>

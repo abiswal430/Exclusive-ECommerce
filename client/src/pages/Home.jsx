@@ -14,7 +14,7 @@ export default function Home() {
       console.log("🔥 PRODUCTS:", res.data);
       console.log("🔥 COUNT:", res.data.length); // ✅ DEBUG
 
-      setProducts(res.data.products || res.data); // ✅ SAFE ACCESS
+      setProducts(res.data.products); // ✅ SAFE ACCESS
     } catch (err) {
       console.error(err);
       setError("Failed to load products ❌");

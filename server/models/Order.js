@@ -14,12 +14,13 @@ const orderSchema = new mongoose.Schema({
 
   total: Number,
   paymentMethod: String,
+
   upi: String,
   bank: String,
 
   status: {
     type: String,
-    default: "Placed" // Placed → Shipped → Delivered
+    default: "Placed"
   },
 
   date: {

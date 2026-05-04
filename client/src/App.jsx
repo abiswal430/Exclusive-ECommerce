@@ -19,10 +19,12 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderSuccess from "./pages/OrderSuccess";
 import Orders from "./pages/Orders";
+import Invoice from "./pages/Invoice";
 
 // Admin Pages
 import Admin from "./pages/Admin";
 import AdminOrders from "./pages/AdminOrders";
+import AdminProducts from "./pages/AdminProducts";
 import ProductList from "./pages/ProductList";
 import AddProduct from "./pages/AddProduct"; // ✅ ADDED
 
@@ -61,7 +63,7 @@ function App() {
               {/* ================= ADMIN ================= */}
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/orders" element={<AdminOrders />} />
-
+              <Route path="/admin/products" element={<AdminProducts />} />
               {/* 🔥 PRODUCTS MANAGEMENT */}
               <Route path="/admin/products" element={<ProductList />} />
               <Route path="/admin/add-product" element={<AddProduct />} />
