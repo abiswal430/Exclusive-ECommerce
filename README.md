@@ -147,7 +147,7 @@ This project is created for educational purposes and academic submission.
 
 ---
 
-## ⭐ Acknowledgement
+##  Acknowledgement
 
 This project was developed as part of a learning journey in full-stack web development, focusing on real-world application design and implementation.
 
