@@ -12,6 +12,7 @@
     "axios": "^1.6.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
-    "react-router-dom": "^6.30.3"
+    "react-router-dom": "^6.30.3",
+    "recharts": "^3.8.1"
   }
 }

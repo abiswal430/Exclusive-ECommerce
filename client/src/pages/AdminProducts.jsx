@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -7,6 +8,7 @@ export default function AdminProducts() {
   const [selected, setSelected] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [form, setForm] = useState({
     name: "",
@@ -15,6 +17,7 @@ export default function AdminProducts() {
   });
 
   const BASE_URL = "http://localhost:5000";
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchProducts();
@@ -22,10 +25,13 @@ export default function AdminProducts() {
 
   const fetchProducts = async () => {
     try {
+      setLoading(true);
       const res = await axios.get(`${BASE_URL}/api/products`);
       setProducts(res.data.products || res.data || []);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -36,22 +42,27 @@ export default function AdminProducts() {
     fetchProducts();
   };
 
-  // ➕ OPEN ADD MODAL
+  // ➕ OPEN ADD
   const openAdd = () => {
     setForm({ name: "", price: "", image: "" });
     setEditMode(false);
     setShowModal(true);
   };
 
-  // ✏️ OPEN EDIT MODAL
+  // ✏️ OPEN EDIT
   const openEdit = (product) => {
     setForm(product);
     setEditMode(true);
     setShowModal(true);
   };
 
-  // 💾 SAVE PRODUCT
+  // 💾 SAVE
   const saveProduct = async () => {
+    if (!form.name || !form.price) {
+      alert("Please fill all fields ❌");
+      return;
+    }
+
     try {
       if (editMode) {
         await axios.put(`${BASE_URL}/api/products/${form._id}`, form);
@@ -78,12 +89,25 @@ export default function AdminProducts() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">📦 Manage Products</h1>
 
-        <button
-          onClick={openAdd}
-          className="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700"
-        >
-          ➕ Add Product
-        </button>
+        <div className="flex gap-3">
+
+          {/* 📊 DASHBOARD */}
+          <button
+            onClick={() => navigate("/admin/dashboard")}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            📊 Dashboard
+          </button>
+
+          {/* ➕ ADD */}
+          <button
+            onClick={openAdd}
+            className="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700"
+          >
+            ➕ Add Product
+          </button>
+
+        </div>
       </div>
 
       {/* SEARCH */}
@@ -100,73 +124,80 @@ export default function AdminProducts() {
         📊 Total Products: {filtered.length}
       </p>
 
-      {/* TABLE */}
-      <div className="bg-white rounded shadow overflow-hidden">
-        <table className="w-full text-left">
+      {/* LOADING / EMPTY */}
+      {loading ? (
+        <p className="text-center text-gray-500">Loading products...</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-center text-gray-500">No products found 😢</p>
+      ) : (
 
-          <thead className="bg-black text-white">
-            <tr>
-              <th className="p-3">#</th>
-              <th className="p-3">Image</th>
-              <th className="p-3">Name</th>
-              <th className="p-3">Price</th>
-              <th className="p-3 text-center">Actions</th>
-            </tr>
-          </thead>
+        <div className="bg-white rounded shadow overflow-hidden">
+          <table className="w-full text-left">
 
-          <tbody>
-            {filtered.map((product, index) => (
-              <tr key={product._id} className="border-b hover:bg-gray-50">
-
-                <td className="p-3">{index + 1}</td>
-
-                <td className="p-3">
-                  <img
-                    src={`${BASE_URL}${product.image}`}
-                    alt={product.name}
-                    className="h-16 w-16 object-contain border rounded"
-                    onError={(e) =>
-                      (e.target.src = "https://via.placeholder.com/100")
-                    }
-                  />
-                </td>
-
-                <td className="p-3 font-semibold">{product.name}</td>
-
-                <td className="p-3 text-green-600 font-bold">
-                  ₹ {product.price}
-                </td>
-
-                <td className="p-3 flex justify-center gap-2">
-
-                  <button
-                    onClick={() => setSelected(product)}
-                    className="bg-blue-500 text-white px-3 py-1 rounded"
-                  >
-                    👁 View
-                  </button>
-
-                  <button
-                    onClick={() => openEdit(product)}
-                    className="bg-yellow-500 text-white px-3 py-1 rounded"
-                  >
-                    ✏️ Edit
-                  </button>
-
-                  <button
-                    onClick={() => deleteProduct(product._id)}
-                    className="bg-red-500 text-white px-3 py-1 rounded"
-                  >
-                    🗑 Delete
-                  </button>
-
-                </td>
+            <thead className="bg-black text-white">
+              <tr>
+                <th className="p-3">#</th>
+                <th className="p-3">Image</th>
+                <th className="p-3">Name</th>
+                <th className="p-3">Price</th>
+                <th className="p-3 text-center">Actions</th>
               </tr>
-            ))}
-          </tbody>
+            </thead>
 
-        </table>
-      </div>
+            <tbody>
+              {filtered.map((product, index) => (
+                <tr key={product._id} className="border-b hover:bg-gray-50">
+
+                  <td className="p-3">{index + 1}</td>
+
+                  <td className="p-3">
+                    <img
+                      src={`${BASE_URL}${product.image}`}
+                      alt={product.name}
+                      className="h-16 w-16 object-contain border rounded"
+                      onError={(e) =>
+                        (e.target.src = "https://via.placeholder.com/100")
+                      }
+                    />
+                  </td>
+
+                  <td className="p-3 font-semibold">{product.name}</td>
+
+                  <td className="p-3 text-green-600 font-bold">
+                    ₹ {product.price}
+                  </td>
+
+                  <td className="p-3 flex justify-center gap-2">
+
+                    <button
+                      onClick={() => setSelected(product)}
+                      className="bg-blue-500 text-white px-3 py-1 rounded"
+                    >
+                      👁 View
+                    </button>
+
+                    <button
+                      onClick={() => openEdit(product)}
+                      className="bg-yellow-500 text-white px-3 py-1 rounded"
+                    >
+                      ✏️ Edit
+                    </button>
+
+                    <button
+                      onClick={() => deleteProduct(product._id)}
+                      className="bg-red-500 text-white px-3 py-1 rounded"
+                    >
+                      🗑 Delete
+                    </button>
+
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+
+          </table>
+        </div>
+      )}
 
       {/* 👁 VIEW MODAL */}
       {selected && (

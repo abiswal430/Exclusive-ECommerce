@@ -25,6 +25,7 @@ import Invoice from "./pages/Invoice";
 import Admin from "./pages/Admin";
 import AdminOrders from "./pages/AdminOrders";
 import AdminProducts from "./pages/AdminProducts";
+import AdminDashboard from "./pages/AdminDashboard";
 import ProductList from "./pages/ProductList";
 import AddProduct from "./pages/AddProduct"; // ✅ ADDED
 
@@ -59,11 +60,12 @@ function App() {
               {/* ================= USER ORDERS ================= */}
               <Route path="/order/success" element={<OrderSuccess />} />
               <Route path="/orders" element={<Orders />} />
-
+              <Route path="/invoice" element={<Invoice />} />
               {/* ================= ADMIN ================= */}
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/orders" element={<AdminOrders />} />
               <Route path="/admin/products" element={<AdminProducts />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
               {/* 🔥 PRODUCTS MANAGEMENT */}
               <Route path="/admin/products" element={<ProductList />} />
               <Route path="/admin/add-product" element={<AddProduct />} />
